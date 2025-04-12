@@ -1,0 +1,509 @@
+{
+	"queries": [
+		{
+			"name": "Find all active Domain Admin sessions",
+			"category": "Easy wins",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:User)-[:MemberOf]->(g:Group) WHERE g.objectid ENDS WITH '-512' MATCH p = (c:Computer)-[:HasSession]->(n) return p"
+				}
+			]
+		},
+		{
+			"name": "Find groups that can reset passwords",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=(m:Group)-[r:ForceChangePassword]->(n:User) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "View all GPOs",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "Match (n:GPO) RETURN n"
+				}
+			]
+		},
+		{
+            "name": "Find all sessions a user in a specific domain has",
+			"category": "Object Info & Honeypots",
+			"requireNodeSelect": true,
+            "queryList": [
+                {
+                    "final": false,
+                    "title": "Select source domain...",
+                    "query": "MATCH (n:Domain) RETURN n.name ORDER BY n.name"
+                },
+				{
+                    "final": false,
+                    "title": "Select user...",
+                    "query": "MATCH (u:User) RETURN u.name ORDER BY u.name"
+                },				
+                {
+                    "final": true,                
+                    "query": "MATCH p=(m:Computer)-[r:HasSession]->(u:User {domain: $result}) RETURN p",					
+					"startNode": "{}",
+                    "allowCollapse": false
+                }
+            ]
+        },	
+		{
+			"name": "Find what groups can RDP",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=(m:Group)-[r:CanRDP]->(n:Computer) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find machines Domain Users can RDP into",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "match p=(g:Group)-[:CanRDP]->(c:Computer) where g.objectid ENDS WITH '-513' return p"
+				}
+			]
+		},
+
+		{
+			"name": "Find groups that have local admin rights",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=(m:Group)-[r:AdminTo]->(n:Computer) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find all users that have local admin rights",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=(m:User)-[r:AdminTo]->(n:Computer) RETURN p"
+				}
+			]
+		},
+		
+		{
+			"name": "Find all computers with Unconstrained Delegation",
+			"category": "Kerberos Delegation",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (c:Computer {unconstraineddelegation:true}) return c"
+				}
+			]
+		},
+		{
+			"name": "Find computers that allow unconstrained delegation that AREN’T domain controllers.",
+			"category": "Kerberos Delegation",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (c1:Computer)-[:MemberOf*1..]->(g:Group) WHERE g.objectid ENDS WITH '-516' WITH COLLECT(c1.name) AS domainControllers MATCH (c2:Computer {unconstraineddelegation:true}) WHERE NOT c2.name IN domainControllers RETURN c2"
+				}
+			]
+		},
+		{
+			"name": "Find constrained delegation",
+			"category": "Kerberos Delegation",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=(u:User)-[:AllowedToDelegate]->(c:Computer) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find groups that contain both users and computers",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (c:Computer)-[r:MemberOf*1..]->(groupsWithComps:Group) WITH groupsWithComps MATCH (u:User)-[r:MemberOf*1..]->(groupsWithComps) RETURN DISTINCT(groupsWithComps) as groupsWithCompsAndUsers"
+				}
+			]
+		},
+		{
+			"name": "Find computers with constrained delegation permissions and the corresponding targets where they allowed to delegate",
+			"category": "Kerberos Delegation",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (c:Computer) WHERE c.allowedtodelegate IS NOT NULL RETURN c"
+				}
+			]
+		},
+		{
+			"name": "View all groups that contain the word 'admin'",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "Match (n:Group) WHERE n.name CONTAINS 'ADMIN' RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Find if unprivileged users have rights to add members into groups",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:User {admincount:False}) MATCH p=allShortestPaths((n)-[r:AddMember*1..]->(m:Group)) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find MSQL",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (c:Computer) WHERE ANY (x IN c.serviceprincipalnames WHERE toUpper(x) CONTAINS 'MSSQL') RETURN c"
+				}
+			]
+		},
+		{
+			"name": "Find users with passwords last set within the last 90 days",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (u:User) WHERE u.pwdlastset < (datetime().epochseconds - (90 * 86400)) and NOT u.pwdlastset IN [-1.0, 0.0] RETURN u"
+				}
+			]
+		},
+		{
+			"name": "Find all computers with unsupported operating systems",
+			"category": "High value",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (H:Computer) WHERE H.operatingsystem = '.*(2000|2003|2008|xp|vista|7|me).*' RETURN H"
+				}
+			]
+		},
+		{
+			"name": "Find all edges any owned user has on a computer",
+			"category": "Easy wins",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=shortestPath((m:User)-[r*]->(b:Computer)) WHERE m.owned RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find an object in one domain that can do something to a foreign object",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=(n)-[r]->(m) WHERE NOT n.domain = m.domain RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find all users that are part of the VPN group",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "Match p=(u:User)-[:MemberOf]->(g:Group) WHERE toUPPER (g.name) CONTAINS 'VPN' return p"
+				}
+			]
+		},
+		{
+			"name": "Find users that logged in within the last 90 days",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (u:User) WHERE u.lastlogon < (datetime().epochseconds - (90 * 86400)) and NOT u.lastlogon IN [-1.0, 0.0] RETURN u"
+				}
+			]
+		},
+		{
+			"name": "Find users that have never logged on and account is still active",
+			"category": "Object Info & Honeypots",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:User) WHERE n.lastlogontimestamp=-1.0 AND n.enabled=TRUE RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Find all edges a specific user has over anything",
+			"category": "Easy wins",
+			"requireNodeSelect": true,
+			"queryList": [
+				{
+					"final": false,
+					"title": "Select source user...",
+					"query": "MATCH (n:User) RETURN n.name ORDER BY n.name"
+				},
+				{
+					"final": true,
+					"query": "MATCH (n:User) WHERE n.name = $result MATCH (m) WHERE NOT m.name = n.name MATCH p=allShortestPaths((n)-[r:MemberOf|HasSession|AdminTo|AllExtendedRights|AddMember|ForceChangePassword|GenericAll|GenericWrite|Owns|WriteDacl|WriteOwner|CanRDP|ExecuteDCOM|AllowedToDelegate|ReadLAPSPassword|Contains|GpLink|AddAllowedToAct|AllowedToAct|SQLAdmin*1..]->(m)) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find all Certificate Templates",
+			"category": "Certificates",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Find enabled Certificate Templates",
+			"category": "Certificates",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' and n.Enabled = true RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Find Certificate Authorities",
+			"category": "Certificates",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Enrollment Service' RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Show Enrollment Rights for Certificate Template",
+			"category": "Certificates",
+			"queryList": [
+				{
+					"final": false,
+					"title": "Select a Certificate Template...",
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' RETURN n.name"
+				},
+				{
+					"final": true,
+					"query": "MATCH p=(g)-[:Enroll|AutoEnroll]->(n:GPO {name:$result}) WHERE n.type = 'Certificate Template' return p",
+					"allowCollapse": false
+				}
+			]
+		},
+		{
+			"name": "Show Rights for Certificate Authority",
+			"category": "Certificates",
+			"queryList": [
+				{
+					"final": false,
+					"title": "Select a Certificate Authority...",
+					"query": "MATCH (n:GPO) WHERE n.type = 'Enrollment Service' RETURN n.name"
+				},
+				{
+					"final": true,
+					"query": "MATCH p=(g)-[:ManageCa|ManageCertificates|Auditor|Operator|Read|Enroll]->(n:GPO {name:$result}) return p",
+					"allowCollapse": false
+				}
+			]
+		},
+		{
+			"name": "Find Misconfigured Certificate Templates (ESC1)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' and n.`Enrollee Supplies Subject` = true and n.`Client Authentication` = true and n.`Enabled` = true  RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Misconfigured Certificate Templates from Owned Principals (ESC1)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=allShortestPaths((g {owned:true})-[*1..]->(n:GPO)) WHERE  g<>n and n.type = 'Certificate Template' and n.`Enrollee Supplies Subject` = true and n.`Client Authentication` = true and n.`Enabled` = true return p"
+				}
+			]
+		},
+		{
+			"name": "Find Misconfigured Certificate Templates (ESC2)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' and n.`Enabled` = true and (n.`Extended Key Usage` = [] or 'Any Purpose' IN n.`Extended Key Usage` or n.`Any Purpose` = True) RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Misconfigured Certificate Templates from Owned Principals (ESC2)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=allShortestPaths((g {owned:true})-[*1..]->(n:GPO)) WHERE  g<>n and n.type = 'Certificate Template' and n.`Enabled` = true and (n.`Extended Key Usage` = [] or 'Any Purpose' IN n.`Extended Key Usage` or n.`Any Purpose` = True) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find Enrollment Agent Templates (ESC3)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' and n.`Enabled` = true and (n.`Extended Key Usage` = [] or 'Any Purpose' IN n.`Extended Key Usage` or 'Certificate Request Agent' IN n.`Extended Key Usage` or n.`Any Purpose` = True) RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Enrollment Agent Templates from Owned Principals (ESC3)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=allShortestPaths((g {owned:true})-[*1..]->(n:GPO)) WHERE  g<>n and n.type = 'Certificate Template' and n.`Enabled` = true and (n.`Extended Key Usage` = [] or 'Any Purpose' IN n.`Extended Key Usage` or n.`Any Purpose` = True or 'Certificate Request Agent' IN n.`Extended Key Usage`) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Vulnerable Certificate Template Access Control (ESC4)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=shortestPath((g)-[:GenericAll|GenericWrite|Owns|WriteDacl|WriteOwner*1..]->(n:GPO)) WHERE  g<>n and n.type = 'Certificate Template' and n.`Enabled` = true RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Vulnerable Certificate Template Access Control from Owned Principals (ESC4)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=allShortestPaths((g {owned:true})-[r*1..]->(n:GPO)) WHERE g<>n and n.type = 'Certificate Template' and n.Enabled = true and NONE(x in relationships(p) WHERE type(x) = 'Enroll' or type(x) = 'AutoEnroll') return p"
+				}
+			]
+		},
+		{
+			"name": "Find Certificate Authorities with User Specified SAN (ESC6)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Enrollment Service' and n.`User Specified SAN` = 'Enabled' RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Vulnerable Certificate Authority Access Control (ESC7)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=shortestPath((g)-[r:GenericAll|GenericWrite|Owns|WriteDacl|WriteOwner|ManageCa|ManageCertificates*1..]->(n:GPO)) WHERE  g<>n and n.type = 'Enrollment Service' RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Vulnerable Certificate Authority Access Control from Owned Principals (ESC7)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=allShortestPaths((g {owned:true})-[*1..]->(n:GPO)) WHERE  g<>n and n.type = 'Enrollment Service' and NONE(x in relationships(p) WHERE type(x) = 'Enroll' or type(x) = 'AutoEnroll') RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find Certificate Authorities with HTTP Web Enrollment (ESC8)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Enrollment Service' and n.`Web Enrollment` = 'Enabled' RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Find Unsecured Certificate Templates (ESC9)",
+			"category": "ADCS ESC",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' and n.`Enrollee Supplies Subject` = true and n.`Client Authentication` = true and n.`Enabled` = true  RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Find Unsecured Certificate Templates (ESC9)",
+			"category": "PKI",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:GPO) WHERE n.type = 'Certificate Template' and 'NoSecurityExtension' in n.`Enrollment Flag` and n.`Enabled` = true  RETURN n"
+				}
+			]
+		},
+		{
+			"name": "Shortest Paths to Unsecured Certificate Templates from Owned Principals (ESC9)",
+			"category": "PKI",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=allShortestPaths((g {owned:true})-[r*1..]->(n:GPO)) WHERE n.type = 'Certificate Template' and g<>n and 'NoSecurityExtension' in n.`Enrollment Flag` and n.`Enabled` = true and NONE(rel in r WHERE type(rel) in ['EnabledBy','Read','ManageCa','ManageCertificates']) return p"
+				}
+			]
+		},
+		{
+			"name": "Find if any domain user has interesting permissions against a GPO",
+			"category": "Easy wins",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH p=(u:User)-[r:AllExtendedRights|GenericAll|GenericWrite|Owns|WriteDacl|WriteOwner|GpLink*1..]->(g:GPO) RETURN p"
+				}
+			]
+		},
+		{
+			"name": "Find dangerous ACLs (User -> User/Group)",
+			"category": "Easy wins",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:User {admincount:False}) MATCH (m:User) WHERE NOT m.name = n.name MATCH p=allShortestPaths((n)-[r:AllExtendedRights|ForceChangePassword|GenericAll|GenericWrite|Owns|WriteDacl|WriteOwner*1..]->(m)) RETURN p",
+					"allowCollapse": true
+				}
+			]
+		},
+		{
+			"name": "Find dangerous ACLs (User -> Computer)",
+			"category": "Easy wins",
+			"queryList": [
+				{
+					"final": true,
+					"query": "MATCH (n:User {admincount:False}) MATCH p=allShortestPaths((n)-[r:AllExtendedRights|GenericAll|GenericWrite|Owns|WriteDacl|WriteOwner|AdminTo|CanRDP|ExecuteDCOM|ForceChangePassword*1..]->(m:Computer)) RETURN p",
+					"allowCollapse": true
+				}
+			]
+		}
+	]
+}
