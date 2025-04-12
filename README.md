@@ -1,4 +1,4 @@
-A compilation of custom bloodhound legacy queries of redteaming and pentesting
+A compilation of custom bloodhound legacy queries for redteaming and pentesting
 
 # Easy Wins
 
